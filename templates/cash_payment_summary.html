@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}Resumen del Pago en Efectivo{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Resumen del Pago en Efectivo</h2>
+
+    <h3>Servicios Seleccionados:</h3>
+    <ul class="list-group">
+        {% for product in selected_products %}
+        <li class="list-group-item">
+            {{ product.name }} - {{ product.price }}
+        </li>
+        {% if not loop.last %}
+        <hr class="divider">
+        {% endif %}
+        {% endfor %}
+    </ul>
+
+    {% if car %}
+    <p>Coche Seleccionado: <strong>{{ car.name }} - {{ car.model }}</strong></p>
+    {% else %}
+    <p>Coche Seleccionado: <strong>Todos los coches</strong></p>
+    {% endif %}
+
+    <p>Total a Pagar: <strong>{{ total }}</strong></p>
+    <p>Fecha y Hora de la Compra: <strong>{{ current_time }}</strong></p>
+    <p>Por favor, presentar una captura de esta página en la sucursal para realizar el pago en efectivo dentro de las próximas 48 horas.</p>
+    <a href="{{ url_for('logout') }}" class="btn btn-warning">Cerrar Sesión</a>
+</div>
+
+<style>
+    .divider {
+        border-top: 2px solid orange;
+    }
+    .btn-warning {
+        background-color: orange;
+        border-color: orange;
+        color: white;
+    }
+    .btn-warning:hover {
+        background-color: #e69500;
+        border-color: #e69500;
+    }
+</style>
+{% endblock %}
