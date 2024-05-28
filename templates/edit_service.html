@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Servicios{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <a class="navbar-brand" href="#">Autozone Falso</a>
+        <!-- Agrega más elementos de navegación si es necesario -->
+    </nav>
+
+    <h2>Editar Orden de Servicio</h2>
+    <!-- Formulario de edición -->
+    <form method="POST" action="{{ url_for('update_service_order_post', order_id=order.id) }}">
+        <div class="form-group">
+            <label for="service_type">Tipo de Servicio:</label>
+            <select id="productos" name="service_type">
+                {% for product in products %}
+                <option value="{{ product.name }}"
+                {% if product.name == order.service_type %}
+                selected
+                {% endif %}
+                >{{ product.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="service_datetime">Fecha y Hora:</label>
+            <input type="datetime-local" class="form-control" id="service_datetime" name="service_datetime" value="{{ fecha }}" required>
+        </div>
+        <div class="form-group">
+            <label for="address">Dirección:</label>
+            <input type="text" class="form-control" id="address" name="address" value="{{ order.address }}">
+        </div>
+        <div class="form-group">
+            <label for="status">Estado:</label>
+            <select class="form-control" id="status" name="status">
+                <option value="Pending" {% if order.status == 'Pending' %}selected{% endif %}>Pendiente</option>
+                <option value="in progress" {% if order.status == 'in progress' %}selected{% endif %}>En Proceso</option>
+                <option value="Completed" {% if order.status == 'Completed' %}selected{% endif %}>Completado</option>
+                <!-- Agrega más opciones según tus necesidades -->
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+    </form>
+</div>
+{% endblock %}

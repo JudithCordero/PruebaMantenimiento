@@ -1,10 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 # Importar Enum para usar en el modelo
-from sqlalchemy import Enum
+from sqlalchemy import Enum, func
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_migrate import Migrate
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import uuid
 
@@ -88,6 +88,38 @@ class ServiceOrder(db.Model):
     client = db.relationship('Client', backref=db.backref('service_orders', lazy=True))
     car = db.relationship('Car', backref=db.backref('service_orders', lazy=True))
 
+def create_order(client_id, car_id, service_type, service_datetime, address, status='Pending'):
+    new_order = ServiceOrder(
+        client_id=client_id,
+        car_id=car_id,
+        service_type=service_type,
+        service_datetime=service_datetime,
+        address=address,
+        status=status
+    )
+    db.session.add(new_order)
+    db.session.commit()
+
+def get_order_by_id(order_id):
+    return ServiceOrder.query.get(order_id)
+
+def update_order(order_id, service_type, service_datetime, address, status):
+    order_to_update = ServiceOrder.query.get(order_id)
+    if order_to_update:
+        order_to_update.status = status
+        order_to_update.address = address
+        order_to_update.service_datetime = service_datetime
+        order_to_update.service_type = service_type
+        db.session.commit()
+
+def delete_order(order_id):
+    order_to_delete = ServiceOrder.query.get(order_id)
+    if order_to_delete:
+        db.session.delete(order_to_delete)
+        db.session.commit()
+
+def list_orders():
+    return ServiceOrder.query.all()
 
 def get_car_by_id(car_id):
     return Car.query.get(car_id)
@@ -98,6 +130,8 @@ def get_cart_products():
     return Product.query.filter(Product.id.in_(cart)).all()
 
 from app import CashPaymentSummary
+
+#front Cliente
 
 @app.route('/cash_payment_summary/<float:total>')
 def cash_payment_summary(total):
@@ -117,6 +151,13 @@ def cash_payment_summary(total):
     cart = session.get('cart', [])
     selected_products = Product.query.filter(Product.id.in_(cart)).all()
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    address = session.get('address', 'NA')
+
+    dia_disponible = find_available_date(datetime.now().date(), datetime.now().date()+timedelta(days=30))
+    for product in selected_products:
+        create_order(client_id, car_id, product.name, dia_disponible, address, status='Pending')
+    
+    session.clear()
     return render_template('cash_payment_summary.html', client=client, car=car, selected_products=selected_products, total=total, current_time=current_time)
 
 
@@ -127,10 +168,15 @@ def list_paid_services():
     paid_services = CashPaymentSummary.query.all()
     return render_template('list_paid_services.html', paid_services=paid_services)
 
+@app.route('/payment_method')
+def payment_method():
+    total = session.get('total')
+    return render_template('payment_method.html', total=total)
 
 
 
 
+#backend
 # Ruta para proceder al pago
 @app.route('/proceed_payment', methods=['POST'])
 def proceed_payment():
@@ -146,14 +192,6 @@ def proceed_payment():
     session['total'] = total
 
     return redirect(url_for('payment_method'))
-
-@app.route('/payment_method')
-def payment_method():
-    total = session.get('total')
-    return render_template('payment_method.html', total=total)
-
-
-
 
 
 # Rutas
@@ -229,38 +267,47 @@ def add_product():
 # Leer
 @app.route('/catalog')
 def list_products():
-    products = Product.query.all()
-    return render_template('list_products.html', products=products)
+    print(session, '\n\n\n\n\n\n\n')
+    if 'is_admin' in session:
+        products = Product.query.all()
+        return render_template('list_products.html', products=products)
+    else:
+        return redirect(url_for('login_admin'))
 
 # Actualizar
 @app.route('/update/<int:id>', methods=['GET', 'POST'])
 def update_product(id):
-    product = Product.query.get_or_404(id)
-    if request.method == 'POST':
-        product.name = request.form['name']
-        product.price = request.form['price']
-        product.quantity = request.form['quantity']
-        product.type = request.form['type']
-        try:
-            db.session.commit()
-            return redirect(url_for('list_products'))
-        except Exception as e:
-            db.session.rollback()
-            return f"Error al actualizar producto: {e}", 500
-    return render_template('update_product.html', product=product)
+    if 'is_admin' in session:
+        product = Product.query.get_or_404(id)
+        if request.method == 'POST':
+            product.name = request.form['name']
+            product.price = request.form['price']
+            product.quantity = request.form['quantity']
+            product.type = request.form['type']
+            try:
+                db.session.commit()
+                return redirect(url_for('list_products'))
+            except Exception as e:
+                db.session.rollback()
+                return f"Error al actualizar producto: {e}", 500
+        return render_template('update_product.html', product=product)
+    else:
+        return redirect(url_for('login_admin'))
 
 # Eliminar
 @app.route('/delete/<int:id>')
 def delete_product(id):
-    product = Product.query.get_or_404(id)
-    try:
-        db.session.delete(product)
-        db.session.commit()
-        return redirect(url_for('list_products'))
-    except Exception as e:
-        db.session.rollback()
-        return f"Error al eliminar producto: {e}", 500
-
+    if 'is_admin':
+        product = Product.query.get_or_404(id)
+        try:
+            db.session.delete(product)
+            db.session.commit()
+            return redirect(url_for('list_products'))
+        except Exception as e:
+            db.session.rollback()
+            return f"Error al eliminar producto: {e}", 500
+    else:
+        return redirect(url_for('login_admin'))
 
 
 
@@ -274,7 +321,7 @@ def client():
     client_id = session['client_id']
     #client = Client.query.get(client_id)
     products = Product.query.all()
-    return render_template('client.html', client=client, products=products)
+    return render_template('client.html', client=client, products=products, cart=session['cart'])
 
 
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
@@ -283,7 +330,7 @@ def add_to_cart(product_id):
     cart.append(product_id)
     session['cart'] = cart
     print(f"Added product {product_id} to cart: {cart}")  # Mensaje de depuración
-    return redirect(url_for('client'))
+    return {'success': True}
 
 @app.route('/remove_from_cart/<int:product_id>', methods=['POST'])
 def remove_from_cart(product_id):
@@ -310,11 +357,19 @@ def remove_from_cart(product_id):
 
     return redirect(url_for('client'))
 
-def is_service_datetime_available(service_datetime):
+def is_service_datetime_available(service_date):
     # Aquí puedes implementar la lógica para verificar si la fecha y hora están disponibles
     # Por ejemplo, consultando la base de datos para ver si ya existe una reserva en ese momento
-    existing_orders = ServiceOrder.query.filter_by(service_datetime=service_datetime).first()
+    existing_orders = ServiceOrder.query.filter(func.date(ServiceOrder.service_datetime) == service_date).first()
     return existing_orders is None
+
+def find_available_date(start_date, end_date):
+    current_date = start_date
+    while current_date <= end_date:
+        if is_service_datetime_available(current_date):
+            return current_date
+        current_date += timedelta(days=1)
+    return None
 
 def create_service_order(client, car, service_type, service_datetime, address):
     new_order = ServiceOrder(
@@ -362,7 +417,10 @@ def login():
 # Ruta para mostrar el formulario de inicio de sesión como administrador
 @app.route('/login/admin', methods=['GET'])
 def login_admin():
-    return render_template('login_admin.html')
+    if 'is_admin' in session:
+        return redirect(url_for('list_products'))
+    else:
+        return render_template('login_admin.html')
 
 # Ruta para manejar el inicio de sesión como administrador
 @app.route('/login/admin', methods=['POST'])
@@ -397,15 +455,52 @@ def login_client_post():
 
 @app.route('/clients')
 def list_clients():
-    clients = Client.query.all()
-    return render_template('list_clients.html', clients=clients)
+    if 'is_admin' in session:
+        clients = Client.query.all()
+        return render_template('list_clients.html', clients=clients)
+    else:
+        return redirect(url_for('login_admin'))
 
 
 @app.route('/services')
 def list_services():
-    service_orders = ServiceOrder.query.all()
-    return render_template('list_services.html', service_orders=service_orders)
+    if 'is_admin' in session:
+        service_orders = list_orders()
+        next_day = find_available_date(datetime.now().date(), datetime.now().date()+timedelta(days=30))
+        return render_template('list_services.html', orders=service_orders, next_day=next_day)
+    else:
+        return redirect(url_for('login_admin'))
 
+@app.route('/update_service_order/<int:order_id>')
+def update_service_order(order_id):
+    if 'is_admin' in session:
+        order = get_order_by_id(order_id)
+        fecha = order.service_datetime.strftime('%Y-%m-%dT%H:%M')
+        products = Product.query.all()
+        return render_template('edit_service.html', order=order, products=products, fecha=fecha)
+    else:
+        return redirect(url_for('login_admin'))
+
+@app.route('/update_service_order/<int:order_id>', methods=['POST'])
+def update_service_order_post(order_id):
+    if 'is_admin' in session:
+        service_type = request.form.get('service_type')
+        address = request.form.get('address')
+        service_datetime = datetime.strptime(request.form.get('service_datetime'), '%Y-%m-%dT%H:%M')
+        status = request.form.get('status')
+        print(order_id, '\n', service_type, '\n', service_datetime, '\n', address, '\n', status, '\n\n\n\n\n\n\n\n')
+        update_order(order_id, service_type, service_datetime, address, status)
+        return redirect(url_for('list_services'))
+    else:
+        return redirect(url_for('login_admin'))
+
+@app.route('/delete_service_order/<int:order_id>')
+def delete_service_order(order_id):
+    if 'is_admin' in session:
+        delete_order(order_id)
+        return redirect(url_for('list_services'))
+    else:
+        return redirect(url_for('login_admin'))
 
 def upgrade():
     # Agrega la columna status sin un valor predeterminado

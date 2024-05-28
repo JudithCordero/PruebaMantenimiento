@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}Servicios{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <a class="navbar-brand" href="#">Autozone Falso</a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('list_services') }}">Servicios</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('list_clients') }}">Clientes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('logout_admin') }}">Cerrar Sesión</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    
+    <h3>Siguiente Día Disponible: {{ next_day }}</h3>
+    <input type="text" id="searchBar" class="form-control mb-3" placeholder="Buscar órdenes de servicio...">
+
+    <table class="table table-bordered">
+        <thead>
+            <tr style="border-color: orange;">
+                <th>Folio</th>
+                <th>Cliente</th>
+                <th>Tipo de Servicio</th>
+                <th>Fecha y Hora</th>
+                <th>Dirección</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="serviceOrderTable">
+            {% for order in orders %}
+            <tr style="border-color: orange;">
+                <td>{{ order.id }}</td>
+                <td>{{ order.client_id }}</td>
+                <td>{{ order.service_type }}</td>
+                <td>{{ order.service_datetime }}</td>
+                <td>{{ order.address }}</td>
+                <td>{{ order.status }}</td>
+                <td>
+                    <a href="/update_service_order/{{ order.id }}" class="btn btn-success" style="background-color: #28a745; color: white;">Editar</a>
+                    <a href="/delete_service_order/{{ order.id }}" class="btn btn-danger">Eliminar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- JavaScript para la funcionalidad de búsqueda -->
+<script>
+    document.getElementById('searchBar').addEventListener('keyup', function() {
+        var searchQuery = this.value.toLowerCase();
+        var rows = document.querySelectorAll('#serviceOrderTable tr');
+
+        rows.forEach(function(row) {
+            var serviceName = row.querySelector('td').textContent.toLowerCase();
+            if (serviceName.startsWith(searchQuery)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

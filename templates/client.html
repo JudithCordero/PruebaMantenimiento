@@ -30,9 +30,26 @@
                 <div class="card-body">
                     <h5 class="card-title">{{ product.name }}</h5>
                     <p class="card-text">${{ product.price }}</p>
-                    <form method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}">
-                        <button type="submit" class="btn btn-primary" onclick="this.disabled=true; this.innerHTML='Agregado al carrito'; this.style.backgroundColor='#f2f2f2';">Agregar al carrito</button>
-                    </form>
+                        <input type="submit" class="btn btn-primary" 
+                        onclick="this.disabled=true; this.value='Agregado al carrito'; 
+                        this.style.backgroundColor='#f2f2f2';
+                        fetch('{{ url_for('add_to_cart', product_id=product.id) }}',
+                        {method: 'POST',})
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log(data);
+                        })
+                        .catch(error => {
+                            console.error(error);
+                        });" 
+                        {% if product.id in cart %}
+                        disabled=true;
+                        value="Agregado al carrito";
+                        style="background-color: #f2f2f2;";
+                        {% else %}
+                        value="Agregar al carrito";
+                        {% endif %}
+                        >
                 </div>
             </div>
         </div>
