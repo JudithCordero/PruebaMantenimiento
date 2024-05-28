@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">AutoZone Falso</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/login">Iniciar Sesión</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container text-center my-3">
+        <h1>Tienda en línea</h1>
+    </div>
+
+    <div class="container">
+        <h2>Catálogo de productos</h2>
+        <div class="row">
+            {% for product in products %}
+            <div class="card m-2 p-3" style="width: 300px; background-color: red; color: grey;">
+                <div class="card-header" style="font-weight: bold; color: black;">
+                {{ product.name }}
+                </div>
+                <ul class="list-group list-group-flush">
+                <li class="list-group-item"><strong>Precio:</strong> ${{ product.price }}</li>
+                <li class="list-group-item"><strong>Cantidad disponible:</strong> {{ product.quantity }}</li>
+                </ul>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+{% endblock %}
