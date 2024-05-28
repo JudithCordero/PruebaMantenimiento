@@ -1,10 +1,13 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, make_response
 from flask_sqlalchemy import SQLAlchemy
 # Importar Enum para usar en el modelo
 from sqlalchemy import Enum, func
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_migrate import Migrate
 from datetime import datetime, timedelta
+
+from reportlab.pdfgen import canvas
+from io import BytesIO
 
 import uuid
 
@@ -158,7 +161,7 @@ def cash_payment_summary(total):
         create_order(client_id, car_id, product.name, dia_disponible, address, status='Pending')
     
     session.clear()
-    return render_template('cash_payment_summary.html', client=client, car=car, selected_products=selected_products, total=total, current_time=current_time)
+    return render_template('cash_payment_summary.html', client=client, car=car, selected_products=selected_products, total=total, current_time=current_time, dia_disponible=dia_disponible)
 
 
 
@@ -501,6 +504,34 @@ def delete_service_order(order_id):
         return redirect(url_for('list_services'))
     else:
         return redirect(url_for('login_admin'))
+
+@app.route('/comprobante/<int:order_id>')
+def generar_comprobante(order_id):
+    order = get_order_by_id(order_id)
+    client = Client.query.get(order.client_id)
+    car  = get_car_by_id(order.car_id)
+
+    buffer = BytesIO()  
+    p = canvas.Canvas(buffer)
+
+    p.drawString(100, 800, "Comprobante de Orden de Servicio")
+    p.drawString(100, 750, f"ID de Orden: {order.id}")
+    p.drawString(100, 730, f"Cliente: {client.first_name} {client.last_name_p} {client.last_name_m}")
+    p.drawString(100, 710, f"Coche: {car.name}, {car.model}")
+    p.drawString(100, 690, f"Tipo de Servicio: {order.service_type}")
+    p.drawString(100, 670, f"Fecha y Hora del Servicio: {order.service_datetime}")
+    p.drawString(100, 650, f"Dirección: {order.address}")
+    p.drawString(100, 630, f"Estado: {order.status}")
+
+    p.showPage()
+    p.save()
+
+    buffer.seek(0)
+
+    response = make_response(buffer.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=comprobante_orden_{order.id}.pdf'
+    return response
 
 def upgrade():
     # Agrega la columna status sin un valor predeterminado
