@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Agregar Pedido de Servicio{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Agregar Pedido de Servicio</h2>
+    <form method="post" action="{{ url_for('add_service_order') }}">
+        <div class="form-group">
+            <label for="client_id">ID del Cliente:</label>
+            <input type="text" class="form-control" name="client_id" id="client_id" required>
+        </div>
+        <div class="form-group">
+            <label for="car_id">ID del Carro:</label>
+            <input type="text" class="form-control" name="car_id" id="car_id" required>
+        </div>
+        <div class="form-group">
+            <label for="service_type">Tipo de Servicio:</label>
+            <input type="text" class="form-control" name="service_type" id="service_type" required>
+        </div>
+        <div class="form-group">
+            <label for="service_datetime">Fecha y Hora del Servicio:</label>
+            <input type="datetime-local" class="form-control" name="service_datetime" id="service_datetime" required>
+        </div>
+        <div class="form-group">
+            <label for="address">Dirección:</label>
+            <input type="text" class="form-control" name="address" id="address" required>
+        </div>
+        <div class="form-group">
+            <label for="status">Estado:</label>
+            <input type="text" class="form-control" name="status" id="status" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar Pedido</button>
+    </form>
+</div>
+{% endblock %}

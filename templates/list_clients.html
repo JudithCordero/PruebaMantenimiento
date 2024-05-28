@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Clients{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <a class="navbar-brand" href="#">Autozone Falso</a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('list_products') }}">Productos</a>
+                </li>
+            </ul>
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('logout') }}">Cerrar Sesión</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <h2>Client List</h2>
+    <!-- Search Bar -->
+    <input type="text" id="searchBar" class="form-control mb-3" placeholder="Search for clients...">
+
+    <table class="table table-bordered">
+        <thead>
+            <tr style="border-color: orange;">
+                <th>First Name</th>
+                <th>Last Name (P)</th>
+                <th>Last Name (M)</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Username</th>
+                <th>Cars</th>
+            </tr>
+        </thead>
+        <tbody id="clientTable">
+            {% for client in clients %}
+            <tr style="border-color: orange;">
+                <td>{{ client.first_name }}</td>
+                <td>{{ client.last_name_p }}</td>
+                <td>{{ client.last_name_m }}</td>
+                <td>{{ client.email }}</td>
+                <td>{{ client.phone }}</td>
+                <td>{{ client.username }}</td>
+                <td>
+                    <ul>
+                        {% for car in client.cars %}
+                        <li>{{ car.name }} ({{ car.model }}) - {{ car.type }}</li>
+                        {% endfor %}
+                    </ul>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- JavaScript for search functionality -->
+<script>
+    document.getElementById('searchBar').addEventListener('keyup', function() {
+        var searchQuery = this.value.toLowerCase();
+        var rows = document.querySelectorAll('#clientTable tr');
+
+        rows.forEach(function(row) {
+            var firstName = row.querySelector('td').textContent.toLowerCase();
+            if (firstName.startsWith(searchQuery)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

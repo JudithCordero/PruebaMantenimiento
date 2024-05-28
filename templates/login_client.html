@@ -6,6 +6,11 @@
 <div class="container d-flex justify-content-center align-items-center vh-100" style="background: linear-gradient(to right, #4CAF50, #2196F3);">
     <div class="card p-4" style="background-color: white; color: black; width: 400px;">
         <h1 class="text-center">Iniciar Sesión como Cliente</h1>
+        {% if error %}
+            <div class="alert alert-danger" role="alert">
+                {{ error }}
+            </div>
+        {% endif %}
         <form method="POST" action="/login/client">
             <div class="mb-3">
                 <label for="username" class="form-label">Nombre de usuario</label>
@@ -17,6 +22,9 @@
             </div>
             <button type="submit" class="btn btn-primary d-block mx-auto">Iniciar Sesión</button>
         </form>
+        <div class="text-center mt-3">
+            <a href="{{ url_for('register') }}" class="btn btn-warning">Registrar Nuevo Cliente</a>
+        </div>
     </div>
 </div>
 {% endblock %}
