@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}Servicios Dashboard{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <!-- Navbar -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+            <a class="navbar-brand" href="#">Autozone Falso</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('list_services') }}">Servicios</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('list_clients') }}">Clientes</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout_admin') }}">Cerrar Sesión</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    <div class="container">
+        <h1>Service Orders Dashboard</h1>
+        <div>
+            <label for="start-date">Start Date:</label>
+            <input type="date" id="start-date">
+            <label for="end-date">End Date:</label>
+            <input type="date" id="end-date">
+            <button onclick="updateRange()">Update Range</button>
+        </div>
+        <canvas id="ordersChart" width="400" height="200"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+
+    <script>
+        const socket = io();
+
+        socket.on('connect', function() {
+            socket.emit('request_service_orders');
+        });
+
+        socket.on('service_orders', function(data) {
+            updateChart(data);
+        });
+
+        let ordersChart;
+        let startDate = new Date();
+        let endDate = new Date();
+
+        function updateChart(data) {
+            const ctx = document.getElementById('ordersChart').getContext('2d');
+            const filteredData = data.filter(order => {
+                const orderDate = new Date(order.service_datetime.split(' ')[0]);
+                return orderDate >= startDate && orderDate <= endDate;
+            });
+            const labels = filteredData.map(order => order.service_datetime);
+            const counts = filteredData.reduce((acc, order) => {
+                const date = order.service_datetime.split(' ')[0];
+                acc[date] = acc[date] || { 'Pending': 0, 'in progress': 0, 'Completed': 0 };
+                acc[date][order.status]++;
+                return acc;
+            }, {});
+            const chartData = {
+                labels: Object.keys(counts),
+                datasets: [{
+                    label: 'Pending',
+                    data: Object.values(counts).map(statusCounts => statusCounts['Pending']),
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }, {
+                    label: 'In Progress',
+                    data: Object.values(counts).map(statusCounts => statusCounts['in progress']),
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }, {
+                    label: 'Completed',
+                    data: Object.values(counts).map(statusCounts => statusCounts['Completed']),
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            };
+
+            if (ordersChart) {
+                ordersChart.data = chartData;
+                ordersChart.update();
+            } else {
+                ordersChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: chartData,
+                    options: {
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'day'
+                                }
+                            },
+                            y: {
+                                stacked: false,
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        function updateRange() {
+            const startDateInput = document.getElementById('start-date');
+            const endDateInput = document.getElementById('end-date');
+            startDate = new Date(startDateInput.value);
+            endDate = new Date(endDateInput.value);
+            socket.emit('request_service_orders');
+        }
+
+        
+        const startDateInput = document.getElementById('start-date');
+        const endDateInput = document.getElementById('end-date');
+        const desfaseHorario = startDate.getTimezoneOffset();
+        startDate.setMinutes(startDate.getMinutes() - desfaseHorario);
+        endDate.setMinutes(endDate.getMinutes() - desfaseHorario);
+        startDateInput.value = startDate.toISOString().split('T')[0];
+        endDateInput.value = endDate.toISOString().split('T')[0];
+        updateRange();
+    </script>
+{% endblock %}

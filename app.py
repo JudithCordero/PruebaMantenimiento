@@ -6,6 +6,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_migrate import Migrate
 from datetime import datetime, timedelta
 
+from flask_socketio import SocketIO, emit
+
 from reportlab.pdfgen import canvas
 from io import BytesIO
 
@@ -26,6 +28,7 @@ app.config['SESSION_TYPE'] = 'filesystem'
 # Inicializar la base de datos
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+socketio = SocketIO(app)
 
 # Crear el modelo de la base de datos
 # Clase Producto
@@ -651,6 +654,35 @@ def view_cart():
     return render_template('view_cart.html', client=client, cars=cars, total=total, products=selected_products)
 
 
+@app.route('/dashboard')
+def dashboard():
+    if 'is_admin' in session:
+        return render_template('dashboard.html')
+    else:
+        return redirect(url_for('login_admin'))
+
+@socketio.on('connect')
+def handle_connect():
+    emit('service_orders', get_service_orders())
+
+def get_service_orders():
+    orders = ServiceOrder.query.all()
+    orders_data = []
+    for order in orders:
+        orders_data.append({
+            'id': order.id,
+            'client_id': order.client_id,
+            'car_id': order.car_id,
+            'service_type': order.service_type,
+            'service_datetime': order.service_datetime.strftime('%Y-%m-%d %H:%M:%S'),
+            'address': order.address,
+            'status': order.status
+        })
+    return orders_data
+
+@socketio.on('request_service_orders')
+def handle_request_service_orders():
+    emit('service_orders', get_service_orders())
 
 
 
